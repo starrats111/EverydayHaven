@@ -247,7 +247,10 @@ function loadArticle() {
     
     if (articleSlug) {
         // Find article by slug
-        article = articles.find(a => generateSlug(a.title) === articleSlug);
+        article = articles.find(a => {
+            const articleSlugGenerated = generateSlug(a.title);
+            return articleSlugGenerated === articleSlug;
+        });
     } else if (articleId) {
         // Fallback to ID for backward compatibility
         article = articles.find(a => a.id === parseInt(articleId));
@@ -259,6 +262,7 @@ function loadArticle() {
             articlePage.innerHTML = `
                 <div style="text-align: center; padding: 4rem;">
                     <h1 style="color: var(--primary-gold);">Article Not Found</h1>
+                    <p style="color: var(--text-light); margin-top: 1rem;">No article specified.</p>
                     <p style="color: var(--text-light); margin-top: 1rem;">
                         <a href="index.html" style="color: var(--primary-gold);">Return to Home</a>
                     </p>
@@ -274,6 +278,7 @@ function loadArticle() {
             articlePage.innerHTML = `
                 <div style="text-align: center; padding: 4rem;">
                     <h1 style="color: var(--primary-gold);">Article Not Found</h1>
+                    <p style="color: var(--text-light); margin-top: 1rem;">Could not find article with ${articleSlug ? 'slug: ' + articleSlug : 'ID: ' + articleId}</p>
                     <p style="color: var(--text-light); margin-top: 1rem;">
                         <a href="index.html" style="color: var(--primary-gold);">Return to Home</a>
                     </p>
@@ -328,14 +333,30 @@ function checkAndLoadArticle() {
     const href = window.location.href;
     
     if (pathname.includes('article.html') || href.includes('article.html')) {
+        // Ensure articles data is loaded
+        if (typeof articles === 'undefined' || !articles || articles.length === 0) {
+            // Wait a bit more for data.js to load
+            setTimeout(checkAndLoadArticle, 200);
+            return;
+        }
+        
+        // Wait for DOM and articles data to be ready
         if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', loadArticle);
+            document.addEventListener('DOMContentLoaded', function() {
+                loadArticle();
+            });
         } else {
+            // DOM is ready, load article
             loadArticle();
         }
     }
 }
 
-// Initialize article loading
-checkAndLoadArticle();
+// Initialize article loading when page loads
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', checkAndLoadArticle);
+} else {
+    // DOM already loaded, check immediately
+    checkAndLoadArticle();
+}
 
