@@ -330,3 +330,6 @@ const categoryNames = {
     food: "Food & Beverage"
 };
 
+// Signal that data.js has loaded
+window.articlesDataLoaded = true;
+

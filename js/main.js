@@ -6,15 +6,15 @@ let filteredArticles = [];
 
 // Initialize filteredArticles when articles data is available
 function initializeFilteredArticles() {
-    if (typeof articles !== 'undefined' && articles && articles.length > 0) {
+    if (typeof articles !== 'undefined' && articles && articles.length > 0 && window.articlesDataLoaded) {
         filteredArticles = [...articles];
     } else {
         filteredArticles = [];
     }
 }
 
-// Initialize
-document.addEventListener('DOMContentLoaded', function() {
+// Initialize - use multiple strategies to ensure scripts load correctly on Cloudflare Pages
+function initializeApp() {
     initializeNavigation();
     initializeFilters();
     initializeSearch();
@@ -27,11 +27,11 @@ document.addEventListener('DOMContentLoaded', function() {
     if (articlesGrid) {
         // Ensure articles data is loaded before displaying
         let retryCount = 0;
-        const maxRetries = 50; // Maximum 5 seconds wait time
+        const maxRetries = 100; // Increased retries for Cloudflare Pages
         
         function tryDisplayArticles() {
-            // Check if articles data is available
-            if (typeof articles !== 'undefined' && articles && Array.isArray(articles) && articles.length > 0) {
+            // Check if articles data is available and data.js has loaded
+            if (typeof articles !== 'undefined' && articles && Array.isArray(articles) && articles.length > 0 && window.articlesDataLoaded) {
                 try {
                     initializeFilteredArticles();
                     displayArticles();
@@ -51,10 +51,11 @@ document.addEventListener('DOMContentLoaded', function() {
             } else if (retryCount < maxRetries) {
                 retryCount++;
                 // Wait for articles data to load
-                setTimeout(tryDisplayArticles, 100);
+                setTimeout(tryDisplayArticles, 50); // Reduced interval for faster detection
             } else {
                 // If articles still not loaded after max retries, show error message
                 console.error('Articles data not loaded after', maxRetries, 'retries');
+                console.error('Articles variable:', typeof articles, articles);
                 const grid = document.getElementById('articlesGrid');
                 if (grid) {
                     grid.innerHTML = `
@@ -69,7 +70,24 @@ document.addEventListener('DOMContentLoaded', function() {
         }
         tryDisplayArticles();
     }
-});
+}
+
+// Try multiple initialization strategies for Cloudflare Pages compatibility
+if (document.readyState === 'loading') {
+    // DOM is still loading
+    document.addEventListener('DOMContentLoaded', function() {
+        // Wait a bit more to ensure data.js is loaded
+        setTimeout(initializeApp, 100);
+    });
+} else if (document.readyState === 'interactive' || document.readyState === 'complete') {
+    // DOM is already loaded
+    setTimeout(initializeApp, 100);
+} else {
+    // Fallback
+    window.addEventListener('load', function() {
+        setTimeout(initializeApp, 100);
+    });
+}
 
 // Navigation initialization
 function initializeNavigation() {
@@ -146,11 +164,11 @@ function initializeSearch() {
             return;
         }
         
-        // Ensure articles data is available
-        if (typeof articles === 'undefined' || !articles || articles.length === 0) {
-            initializeFilteredArticles();
-            return;
-        }
+    // Ensure articles data is available and data.js has loaded
+    if (typeof articles === 'undefined' || !articles || articles.length === 0 || !window.articlesDataLoaded) {
+        initializeFilteredArticles();
+        return;
+    }
         
         // On index page, perform search
         if (query === '') {
@@ -398,30 +416,29 @@ function checkAndLoadArticle() {
     const href = window.location.href;
     
     if (pathname.includes('article.html') || href.includes('article.html')) {
-        // Ensure articles data is loaded
-        if (typeof articles === 'undefined' || !articles || articles.length === 0) {
+        // Ensure articles data is loaded and data.js has loaded
+        if (typeof articles === 'undefined' || !articles || articles.length === 0 || !window.articlesDataLoaded) {
             // Wait a bit more for data.js to load
-            setTimeout(checkAndLoadArticle, 200);
+            setTimeout(checkAndLoadArticle, 100);
             return;
         }
         
-        // Wait for DOM and articles data to be ready
-        if (document.readyState === 'loading') {
-            document.addEventListener('DOMContentLoaded', function() {
-                loadArticle();
-            });
-        } else {
-            // DOM is ready, load article
-            loadArticle();
-        }
+        // DOM should be ready, load article
+        loadArticle();
+    }
+}
+
+// Initialize article loading - use same strategy as main initialization
+function initializeArticlePage() {
+    if (document.readyState === 'loading') {
+        document.addEventListener('DOMContentLoaded', function() {
+            setTimeout(checkAndLoadArticle, 100);
+        });
+    } else {
+        setTimeout(checkAndLoadArticle, 100);
     }
 }
 
 // Initialize article loading when page loads
-if (document.readyState === 'loading') {
-    document.addEventListener('DOMContentLoaded', checkAndLoadArticle);
-} else {
-    // DOM already loaded, check immediately
-    checkAndLoadArticle();
-}
+initializeArticlePage();
 
