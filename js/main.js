@@ -2,7 +2,16 @@
 let currentCategory = 'all';
 let currentPage = 1;
 const articlesPerPage = 6;
-let filteredArticles = [...articles];
+let filteredArticles = [];
+
+// Initialize filteredArticles when articles data is available
+function initializeFilteredArticles() {
+    if (typeof articles !== 'undefined' && articles && articles.length > 0) {
+        filteredArticles = [...articles];
+    } else {
+        filteredArticles = [];
+    }
+}
 
 // Initialize
 document.addEventListener('DOMContentLoaded', function() {
@@ -10,10 +19,29 @@ document.addEventListener('DOMContentLoaded', function() {
     initializeFilters();
     initializeSearch();
     
+    // Initialize filtered articles
+    initializeFilteredArticles();
+    
     // Only initialize article display and pagination on index page
-    if (window.location.pathname.includes('index.html') || window.location.pathname === '/' || window.location.pathname.endsWith('/')) {
-        displayArticles();
-        initializePagination();
+    const pathname = window.location.pathname;
+    const isIndexPage = pathname.includes('index.html') || 
+                       pathname === '/' || 
+                       pathname.endsWith('/') ||
+                       (!pathname.includes('.html') && !pathname.includes('article'));
+    
+    if (isIndexPage) {
+        // Ensure articles data is loaded before displaying
+        function tryDisplayArticles() {
+            if (typeof articles !== 'undefined' && articles && articles.length > 0) {
+                initializeFilteredArticles();
+                displayArticles();
+                initializePagination();
+            } else {
+                // Wait for articles data to load
+                setTimeout(tryDisplayArticles, 100);
+            }
+        }
+        tryDisplayArticles();
     }
 });
 
@@ -51,6 +79,11 @@ function initializeFilters() {
 function filterByCategory(category) {
     currentCategory = category;
     currentPage = 1;
+    
+    // Ensure articles data is available
+    if (typeof articles === 'undefined' || !articles || articles.length === 0) {
+        initializeFilteredArticles();
+    }
     
     if (category === 'all') {
         filteredArticles = [...articles];
