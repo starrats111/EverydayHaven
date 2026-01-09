@@ -227,27 +227,39 @@ function formatDate(dateString) {
 }
 
 // Article page functionality
-if (window.location.pathname.includes('article.html')) {
-    document.addEventListener('DOMContentLoaded', function() {
-        loadArticle();
-    });
-}
-
 function loadArticle() {
     const urlParams = new URLSearchParams(window.location.search);
     const articleId = parseInt(urlParams.get('id'));
     
+    if (!articleId) {
+        const articlePage = document.querySelector('.article-page');
+        if (articlePage) {
+            articlePage.innerHTML = `
+                <div style="text-align: center; padding: 4rem;">
+                    <h1 style="color: var(--primary-gold);">Article Not Found</h1>
+                    <p style="color: var(--text-light); margin-top: 1rem;">
+                        <a href="index.html" style="color: var(--primary-gold);">Return to Home</a>
+                    </p>
+                </div>
+            `;
+        }
+        return;
+    }
+    
     const article = articles.find(a => a.id === articleId);
     
     if (!article) {
-        document.querySelector('.article-page').innerHTML = `
-            <div style="text-align: center; padding: 4rem;">
-                <h1 style="color: var(--primary-gold);">Article Not Found</h1>
-                <p style="color: var(--text-light); margin-top: 1rem;">
-                    <a href="index.html" style="color: var(--primary-gold);">Return to Home</a>
-                </p>
-            </div>
-        `;
+        const articlePage = document.querySelector('.article-page');
+        if (articlePage) {
+            articlePage.innerHTML = `
+                <div style="text-align: center; padding: 4rem;">
+                    <h1 style="color: var(--primary-gold);">Article Not Found</h1>
+                    <p style="color: var(--text-light); margin-top: 1rem;">
+                        <a href="index.html" style="color: var(--primary-gold);">Return to Home</a>
+                    </p>
+                </div>
+            `;
+        }
         return;
     }
     
@@ -289,4 +301,21 @@ function loadArticle() {
     // Update page title
     document.title = `${article.title} - EverydayHaven`;
 }
+
+// Check if we're on article page and load article
+function checkAndLoadArticle() {
+    const pathname = window.location.pathname;
+    const href = window.location.href;
+    
+    if (pathname.includes('article.html') || href.includes('article.html')) {
+        if (document.readyState === 'loading') {
+            document.addEventListener('DOMContentLoaded', loadArticle);
+        } else {
+            loadArticle();
+        }
+    }
+}
+
+// Initialize article loading
+checkAndLoadArticle();
 
