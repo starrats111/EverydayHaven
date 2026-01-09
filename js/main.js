@@ -147,8 +147,10 @@ function displayArticles() {
     const endIndex = startIndex + articlesPerPage;
     const articlesToShow = filteredArticles.slice(startIndex, endIndex);
     
-    articlesGrid.innerHTML = articlesToShow.map(article => `
-        <article class="article-card" onclick="window.location.href='article.html?id=${article.id}'">
+    articlesGrid.innerHTML = articlesToShow.map(article => {
+        const slug = generateSlug(article.title);
+        return `
+        <article class="article-card" onclick="window.location.href='article.html?name=${slug}'">
             <img src="${article.image}" alt="${article.title}" class="article-image">
             <div class="article-content">
                 <div class="article-category">${categoryNames[article.category]}</div>
@@ -159,7 +161,8 @@ function displayArticles() {
                 </div>
             </div>
         </article>
-    `).join('');
+    `;
+    }).join('');
 }
 
 // Pagination
@@ -226,12 +229,31 @@ function formatDate(dateString) {
     return date.toLocaleDateString('en-US', options);
 }
 
+// Generate slug from title
+function generateSlug(title) {
+    return title
+        .toLowerCase()
+        .replace(/[^a-z0-9]+/g, '-')
+        .replace(/(^-|-$)/g, '');
+}
+
 // Article page functionality
 function loadArticle() {
     const urlParams = new URLSearchParams(window.location.search);
-    const articleId = parseInt(urlParams.get('id'));
+    const articleSlug = urlParams.get('name');
+    const articleId = urlParams.get('id'); // Keep backward compatibility
     
-    if (!articleId) {
+    let article = null;
+    
+    if (articleSlug) {
+        // Find article by slug
+        article = articles.find(a => generateSlug(a.title) === articleSlug);
+    } else if (articleId) {
+        // Fallback to ID for backward compatibility
+        article = articles.find(a => a.id === parseInt(articleId));
+    }
+    
+    if (!article && !articleSlug && !articleId) {
         const articlePage = document.querySelector('.article-page');
         if (articlePage) {
             articlePage.innerHTML = `
@@ -245,8 +267,6 @@ function loadArticle() {
         }
         return;
     }
-    
-    const article = articles.find(a => a.id === articleId);
     
     if (!article) {
         const articlePage = document.querySelector('.article-page');
