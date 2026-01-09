@@ -120,6 +120,12 @@ function initializeSearch() {
             return;
         }
         
+        // Ensure articles data is available
+        if (typeof articles === 'undefined' || !articles || articles.length === 0) {
+            initializeFilteredArticles();
+            return;
+        }
+        
         // On index page, perform search
         if (query === '') {
             if (currentCategory === 'all') {
