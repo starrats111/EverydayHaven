@@ -22,23 +22,49 @@ document.addEventListener('DOMContentLoaded', function() {
     // Initialize filtered articles
     initializeFilteredArticles();
     
-    // Only initialize article display and pagination on index page
-    const pathname = window.location.pathname;
-    const isIndexPage = pathname.includes('index.html') || 
-                       pathname === '/' || 
-                       pathname.endsWith('/') ||
-                       (!pathname.includes('.html') && !pathname.includes('article'));
-    
-    if (isIndexPage) {
+    // Check if articles grid exists on this page (index page)
+    const articlesGrid = document.getElementById('articlesGrid');
+    if (articlesGrid) {
         // Ensure articles data is loaded before displaying
+        let retryCount = 0;
+        const maxRetries = 50; // Maximum 5 seconds wait time
+        
         function tryDisplayArticles() {
-            if (typeof articles !== 'undefined' && articles && articles.length > 0) {
-                initializeFilteredArticles();
-                displayArticles();
-                initializePagination();
-            } else {
+            // Check if articles data is available
+            if (typeof articles !== 'undefined' && articles && Array.isArray(articles) && articles.length > 0) {
+                try {
+                    initializeFilteredArticles();
+                    displayArticles();
+                    initializePagination();
+                } catch (error) {
+                    console.error('Error displaying articles:', error);
+                    const grid = document.getElementById('articlesGrid');
+                    if (grid) {
+                        grid.innerHTML = `
+                            <div style="grid-column: 1 / -1; text-align: center; padding: 4rem;">
+                                <h2 style="color: var(--primary-gold); margin-bottom: 1rem;">Error loading articles</h2>
+                                <p style="color: var(--text-light);">Please check the console for details.</p>
+                            </div>
+                        `;
+                    }
+                }
+            } else if (retryCount < maxRetries) {
+                retryCount++;
                 // Wait for articles data to load
                 setTimeout(tryDisplayArticles, 100);
+            } else {
+                // If articles still not loaded after max retries, show error message
+                console.error('Articles data not loaded after', maxRetries, 'retries');
+                const grid = document.getElementById('articlesGrid');
+                if (grid) {
+                    grid.innerHTML = `
+                        <div style="grid-column: 1 / -1; text-align: center; padding: 4rem;">
+                            <h2 style="color: var(--primary-gold); margin-bottom: 1rem;">Unable to load articles</h2>
+                            <p style="color: var(--text-light); margin-bottom: 1rem;">Please refresh the page to try again.</p>
+                            <p style="color: var(--text-light); font-size: 0.9rem;">If the problem persists, please check the browser console for errors.</p>
+                        </div>
+                    `;
+                }
             }
         }
         tryDisplayArticles();
