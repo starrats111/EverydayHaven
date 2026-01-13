@@ -414,8 +414,13 @@ function loadArticle() {
 function checkAndLoadArticle() {
     const pathname = window.location.pathname;
     const href = window.location.href;
+    const urlParams = new URLSearchParams(window.location.search);
+    const hasArticleParam = urlParams.has('name') || urlParams.has('id');
     
-    if (pathname.includes('article.html') || href.includes('article.html')) {
+    // Check if we're on article page (supports both /article and /article.html)
+    const isArticlePage = pathname.includes('article') || href.includes('article') || hasArticleParam;
+    
+    if (isArticlePage) {
         // Ensure articles data is loaded and data.js has loaded
         if (typeof articles === 'undefined' || !articles || articles.length === 0 || !window.articlesDataLoaded) {
             // Wait a bit more for data.js to load
