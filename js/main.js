@@ -6,8 +6,8 @@ let filteredArticles = [];
 
 // Initialize filteredArticles when articles data is available
 function initializeFilteredArticles() {
-    if (typeof articles !== 'undefined' && articles && articles.length > 0 && window.articlesDataLoaded) {
-        filteredArticles = [...articles];
+    if (typeof articlesIndex !== 'undefined' && articlesIndex && articlesIndex.length > 0 && window.articlesDataLoaded) {
+        filteredArticles = [...articlesIndex];
     } else {
         filteredArticles = [];
     }
@@ -30,8 +30,8 @@ function initializeApp() {
         const maxRetries = 100; // Increased retries for Cloudflare Pages
         
         function tryDisplayArticles() {
-            // Check if articles data is available and data.js has loaded
-            if (typeof articles !== 'undefined' && articles && Array.isArray(articles) && articles.length > 0 && window.articlesDataLoaded) {
+            // Check if articles data is available and articles-index.js has loaded
+            if (typeof articlesIndex !== 'undefined' && articlesIndex && Array.isArray(articlesIndex) && articlesIndex.length > 0 && window.articlesDataLoaded) {
                 try {
                     initializeFilteredArticles();
                     displayArticles();
@@ -55,7 +55,7 @@ function initializeApp() {
             } else {
                 // If articles still not loaded after max retries, show error message
                 console.error('Articles data not loaded after', maxRetries, 'retries');
-                console.error('Articles variable:', typeof articles, articles);
+                console.error('articlesIndex variable:', typeof articlesIndex, articlesIndex);
                 const grid = document.getElementById('articlesGrid');
                 if (grid) {
                     grid.innerHTML = `
@@ -76,7 +76,7 @@ function initializeApp() {
 if (document.readyState === 'loading') {
     // DOM is still loading
     document.addEventListener('DOMContentLoaded', function() {
-        // Wait a bit more to ensure data.js is loaded
+        // Wait a bit more to ensure articles-index.js is loaded
         setTimeout(initializeApp, 100);
     });
 } else if (document.readyState === 'interactive' || document.readyState === 'complete') {
@@ -125,14 +125,14 @@ function filterByCategory(category) {
     currentPage = 1;
     
     // Ensure articles data is available
-    if (typeof articles === 'undefined' || !articles || articles.length === 0) {
+    if (typeof articlesIndex === 'undefined' || !articlesIndex || articlesIndex.length === 0) {
         initializeFilteredArticles();
     }
     
     if (category === 'all') {
-        filteredArticles = [...articles];
+        filteredArticles = [...articlesIndex];
     } else {
-        filteredArticles = articles.filter(article => article.category === category);
+        filteredArticles = articlesIndex.filter(article => article.category === category);
     }
     
     displayArticles();
@@ -164,26 +164,25 @@ function initializeSearch() {
             return;
         }
         
-    // Ensure articles data is available and data.js has loaded
-    if (typeof articles === 'undefined' || !articles || articles.length === 0 || !window.articlesDataLoaded) {
-        initializeFilteredArticles();
-        return;
-    }
+        // Ensure articles data is available and articles-index.js has loaded
+        if (typeof articlesIndex === 'undefined' || !articlesIndex || articlesIndex.length === 0 || !window.articlesDataLoaded) {
+            initializeFilteredArticles();
+            return;
+        }
         
         // On index page, perform search
         if (query === '') {
             if (currentCategory === 'all') {
-                filteredArticles = [...articles];
+                filteredArticles = [...articlesIndex];
             } else {
-                filteredArticles = articles.filter(article => article.category === currentCategory);
+                filteredArticles = articlesIndex.filter(article => article.category === currentCategory);
             }
         } else {
-            filteredArticles = articles.filter(article => {
+            filteredArticles = articlesIndex.filter(article => {
                 const matchesCategory = currentCategory === 'all' || article.category === currentCategory;
                 const matchesSearch = 
                     article.title.toLowerCase().includes(query) ||
-                    article.excerpt.toLowerCase().includes(query) ||
-                    article.content.toLowerCase().includes(query);
+                    (article.excerpt && article.excerpt.toLowerCase().includes(query));
                 return matchesCategory && matchesSearch;
             });
         }
@@ -320,57 +319,46 @@ function generateSlug(title) {
         .replace(/(^-|-$)/g, '');
 }
 
-// Article page functionality
-function loadArticle() {
-    const urlParams = new URLSearchParams(window.location.search);
-    const articleSlug = urlParams.get('name');
-    const articleId = urlParams.get('id'); // Keep backward compatibility
-    
-    let article = null;
-    
-    if (articleSlug) {
-        // Find article by slug
-        article = articles.find(a => {
-            const articleSlugGenerated = generateSlug(a.title);
-            return articleSlugGenerated === articleSlug;
-        });
-    } else if (articleId) {
-        // Fallback to ID for backward compatibility
-        article = articles.find(a => a.id === parseInt(articleId));
-    }
-    
-    if (!article && !articleSlug && !articleId) {
-        const articlePage = document.querySelector('.article-page');
-        if (articlePage) {
-            articlePage.innerHTML = `
-                <div style="text-align: center; padding: 4rem;">
-                    <h1 style="color: var(--primary-gold);">Article Not Found</h1>
-                    <p style="color: var(--text-light); margin-top: 1rem;">No article specified.</p>
-                    <p style="color: var(--text-light); margin-top: 1rem;">
-                        <a href="index.html" style="color: var(--primary-gold);">Return to Home</a>
-                    </p>
-                </div>
-            `;
-        }
-        return;
-    }
-    
+// ===============================================
+// 文章详情页加载逻辑（异步加载单篇文章）
+// ===============================================
+
+/**
+ * 从索引中查找文章
+ */
+function findInIndex(idOrSlug) {
+    // 按ID查找
+    let article = articlesIndex.find(a => String(a.id) === String(idOrSlug));
+    // 按slug查找
     if (!article) {
-        const articlePage = document.querySelector('.article-page');
-        if (articlePage) {
-            articlePage.innerHTML = `
-                <div style="text-align: center; padding: 4rem;">
-                    <h1 style="color: var(--primary-gold);">Article Not Found</h1>
-                    <p style="color: var(--text-light); margin-top: 1rem;">Could not find article with ${articleSlug ? 'slug: ' + articleSlug : 'ID: ' + articleId}</p>
-                    <p style="color: var(--text-light); margin-top: 1rem;">
-                        <a href="index.html" style="color: var(--primary-gold);">Return to Home</a>
-                    </p>
-                </div>
-            `;
-        }
-        return;
+        article = articlesIndex.find(a => {
+            const articleSlugGenerated = generateSlug(a.title);
+            return articleSlugGenerated === idOrSlug;
+        });
     }
-    
+    return article;
+}
+
+/**
+ * 异步加载文章完整内容
+ */
+async function loadArticleContent(id) {
+    try {
+        const response = await fetch(`js/articles/${id}.json`);
+        if (!response.ok) {
+            throw new Error('文章加载失败');
+        }
+        return await response.json();
+    } catch (error) {
+        console.error('加载文章失败:', error);
+        return null;
+    }
+}
+
+/**
+ * 渲染文章内容
+ */
+function renderArticleContent(article) {
     const articleHeader = document.querySelector('.article-header');
     const articleBody = document.querySelector('.article-body');
     const productRecs = document.querySelector('.product-recommendations');
@@ -410,6 +398,71 @@ function loadArticle() {
     document.title = `${article.title} - EverydayHaven`;
 }
 
+/**
+ * 显示错误页面
+ */
+function showArticleError(message) {
+    const articlePage = document.querySelector('.article-page');
+    if (articlePage) {
+        articlePage.innerHTML = `
+            <div style="text-align: center; padding: 4rem;">
+                <h1 style="color: var(--primary-gold);">Article Not Found</h1>
+                <p style="color: var(--text-light); margin-top: 1rem;">${message}</p>
+                <p style="color: var(--text-light); margin-top: 1rem;">
+                    <a href="index.html" style="color: var(--primary-gold);">Return to Home</a>
+                </p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * 显示加载中
+ */
+function showLoading() {
+    const articlePage = document.querySelector('.article-page');
+    if (articlePage) {
+        articlePage.innerHTML = `
+            <div style="text-align: center; padding: 4rem;">
+                <p style="color: var(--text-light);">Loading article...</p>
+            </div>
+        `;
+    }
+}
+
+/**
+ * Article page functionality - 异步加载文章
+ */
+async function loadArticle() {
+    const urlParams = new URLSearchParams(window.location.search);
+    const articleSlug = urlParams.get('name');
+    const articleId = urlParams.get('id'); // Keep backward compatibility
+    
+    if (!articleSlug && !articleId) {
+        showArticleError('No article specified.');
+        return;
+    }
+    
+    // Find article in index
+    const indexData = findInIndex(articleSlug || articleId);
+    
+    if (!indexData) {
+        showArticleError(`Could not find article with ${articleSlug ? 'slug: ' + articleSlug : 'ID: ' + articleId}`);
+        return;
+    }
+    
+    // Load full article content from JSON file
+    const article = await loadArticleContent(indexData.id);
+    
+    if (!article) {
+        showArticleError('Failed to load article content.');
+        return;
+    }
+    
+    // Render the article
+    renderArticleContent(article);
+}
+
 // Check if we're on article page and load article
 function checkAndLoadArticle() {
     const pathname = window.location.pathname;
@@ -421,9 +474,9 @@ function checkAndLoadArticle() {
     const isArticlePage = pathname.includes('article') || href.includes('article') || hasArticleParam;
     
     if (isArticlePage) {
-        // Ensure articles data is loaded and data.js has loaded
-        if (typeof articles === 'undefined' || !articles || articles.length === 0 || !window.articlesDataLoaded) {
-            // Wait a bit more for data.js to load
+        // Ensure articles index is loaded and articles-index.js has loaded
+        if (typeof articlesIndex === 'undefined' || !articlesIndex || articlesIndex.length === 0 || !window.articlesDataLoaded) {
+            // Wait a bit more for articles-index.js to load
             setTimeout(checkAndLoadArticle, 100);
             return;
         }
@@ -446,4 +499,3 @@ function initializeArticlePage() {
 
 // Initialize article loading when page loads
 initializeArticlePage();
-
