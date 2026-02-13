@@ -499,3 +499,61 @@ function initializeArticlePage() {
 
 // Initialize article loading when page loads
 initializeArticlePage();
+
+
+// ==================== 产品模块渲染 ====================
+// 由脚本自动添加 - 2026-02-13
+
+/**
+ * 渲染产品推荐模块
+ * @param {Array} products - 产品数组
+ */
+function renderProducts(products) {
+  const section = document.getElementById('products-section');
+  const container = document.getElementById('products-container');
+  
+  // 检查元素是否存在
+  if (!section || !container) {
+    console.log('Products section not found in this page');
+    return;
+  }
+  
+  // 如果没有产品数据，隐藏模块
+  if (!products || !Array.isArray(products) || products.length === 0) {
+    section.style.display = 'none';
+    return;
+  }
+  
+  // 显示模块并渲染产品
+  section.style.display = 'block';
+  
+  container.innerHTML = products.map(function(product) {
+    var imageHtml = product.image 
+      ? '<img src="' + product.image + '" alt="' + (product.name || 'Product') + '" loading="lazy" onerror="this.style.display=\'none\'">'
+      : '';
+    
+    var descHtml = product.description 
+      ? '<p>' + product.description + '</p>' 
+      : '';
+    
+    var priceHtml = product.price 
+      ? '<span class="price">' + product.price + '</span>' 
+      : '';
+    
+    var linkHtml = product.link 
+      ? '<a href="' + product.link + '" class="buy-btn" target="_blank" rel="noopener nofollow">View Details</a>'
+      : '';
+    
+    return '<div class="product-card">' +
+      imageHtml +
+      '<div class="product-card-body">' +
+        '<h4>' + (product.name || 'Product') + '</h4>' +
+        descHtml +
+        priceHtml +
+        linkHtml +
+      '</div>' +
+    '</div>';
+  }).join('');
+}
+
+// ==================== 产品模块结束 ====================
